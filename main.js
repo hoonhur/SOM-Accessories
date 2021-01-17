@@ -4,6 +4,7 @@ const port = 3000;
 const fs = require("fs");
 const template = require("./lib/template.js");
 const path = require("path");
+const qs = require("querystring");
 const sanitizeHtml = require("sanitize-html");
 
 app.get("/", (req, res) => {
@@ -45,13 +46,112 @@ app.get("/page/:pageId", (req, res) => {
           <p>${sanitizedDescription}</p>
         </div>`,
         `<a href='/add'>Add Product</a>
-        <a href='/update?id=${sanitizedTitle}'>Update</a>
-        <form action="delete_process" method="post" onsubmit="alert('Product will be deleted')">
+        <a href='/update/${sanitizedTitle}'>Update</a>
+        <form action="/delete" method="post">
           <input type='hidden' name="id" value='${sanitizedTitle}'>
           <input type='submit' value='Delete'>
         </form>`
       );
       res.send(HTML);
+    });
+  });
+});
+
+app.get("/add", (req, res) => {
+  fs.readdir("./data", (err, filelists) => {
+    if (err) throw err;
+    let title = "Add Product";
+    let list = template.list(filelists);
+    let HTML = template.HTML(
+      title,
+      list,
+      `<form action="/add" method="post">
+        <p><input type="text" name="product" placeholder='product' /></p>
+        <p><textarea name="description" placeholder='description'></textarea></p>
+        <p><input type="submit" /></p>
+      </form>`,
+      ``
+    );
+    res.send(HTML);
+  });
+});
+
+app.post("/add", (req, res) => {
+  let body = "";
+  req.on("data", (data) => {
+    body = body + data;
+    if (body.length > 1e6) req.connection.destroy();
+  });
+  req.on("end", () => {
+    let post = qs.parse(body);
+    let product = post.product;
+    let description = post.description;
+    fs.writeFile(`data/${product}`, description, "utf8", (err) => {
+      if (err) throw err;
+      res.redirect(`/page/${product}`);
+    });
+  });
+});
+
+app.get("/update/:pageId", (req, res) => {
+  fs.readdir("./data", (err, filelists) => {
+    if (err) throw err;
+    let filteredId = path.parse(req.params.pageId).base;
+    fs.readFile(`data/${filteredId}`, "utf8", function (err2, description) {
+      if (err2) throw err2;
+      let title = filteredId;
+      let list = template.list(filelists);
+      let HTML = template.HTML(
+        title,
+        list,
+        `<form action="/update" method="post">
+          <input type='hidden' name='id' value='${title}'>
+          <p><input type="text" name="product" placeholder='product' value='${title}'/></p>
+          <p><textarea name="description" placeholder='description'>${description}</textarea></p>
+          <p><input type="submit" /></p>
+        </form>`,
+        `<a href='/add'>Add Product</a> 
+        <a href='/update/${title}'>Update</a>`
+      );
+      res.send(HTML);
+    });
+  });
+});
+
+app.post("/update", (req, res) => {
+  let body = "";
+  req.on("data", (data) => {
+    body = body + data;
+    if (body.length > 1e6) req.connection.destroy();
+  });
+  req.on("end", () => {
+    let post = qs.parse(body);
+    let id = post.id;
+    let product = post.product;
+    let description = post.description;
+    fs.rename(`data/${id}`, `data/${product}`, (err) => {
+      if (err) throw err;
+      fs.writeFile(`data/${product}`, description, "utf8", (err2) => {
+        if (err2) throw err2;
+        res.redirect(`/page/${product}`);
+      });
+    });
+  });
+});
+
+app.post("/delete", (req, res) => {
+  let body = "";
+  req.on("data", (data) => {
+    body = body + data;
+    if (body.length > 1e6) req.connection.destroy();
+  });
+  req.on("end", () => {
+    let post = qs.parse(body);
+    let id = post.id;
+    let filteredId = path.parse(id).base;
+    fs.unlink(`data/${filteredId}`, (err) => {
+      if (err) throw err;
+      res.redirect(`/`);
     });
   });
 });
@@ -62,114 +162,21 @@ app.listen(port, () => {
 
 // const http = require("http");
 // const url = require("url");
-// const qs = require("querystring");
-// const sanitizeHtml = require("sanitize-html");
 
 // const app = http.createServer((request, response) => {
 //   let _url = request.url;
 //   let queryData = url.parse(_url, true).query;
 //   let pathname = url.parse(_url, true).pathname;
 //   if (pathname === "/") {
-//     } else {
+//      } else {
 //   } else if (pathname === "/add") {
-//     fs.readdir("./data", (err, filelists) => {
-//       let title = "Add Product";
-//       let list = template.list(filelists);
-//       let HTML = template.HTML(
-//         title,
-//         list,
-//         `<form action="/add_process" method="post">
-//           <p><input type="text" name="product" placeholder='product' /></p>
-//           <p><textarea name="description" placeholder='description'></textarea></p>
-//           <p><input type="submit" /></p>
-//         </form>`,
-//         ``
-//       );
-//       response.writeHead(200);
-//       response.end(HTML);
-//     });
 //   } else if (pathname === "/add_process") {
-//     let body = "";
-//     request.on("data", (data) => {
-//       body = body + data;
-//       // too much POST data, kill the connection!
-//       //1e6 === 1 * Math.pow(10,6) === 1 * 1000000 ~~~ 1MB
-//       if (body.length > 1e6) request.connection.destroy();
-//     });
-//     request.on("end", () => {
-//       let post = qs.parse(body);
-//       let product = post.product;
-//       let description = post.description;
-//       fs.writeFile(`data/${product}`, description, "utf8", (err) => {
-//         if (err) throw err;
-//         response.writeHead(302, { Location: `/?id=${product}` });
-//         response.end();
-//       });
-//     });
 //   } else if (pathname === "/update") {
-//     fs.readdir("./data", (err, filelists) => {
-//       let filteredId = path.parse(queryData.id).base;
-//       fs.readFile(`data/${filteredId}`, "utf8", function (err, description) {
-//         let title = filteredId;
-//         let list = template.list(filelists);
-//         let HTML = template.HTML(
-//           title,
-//           list,
-//           `<form action="/update_process" method="post">
-//             <input type='hidden' name='id' value='${title}'>
-//             <p><input type="text" name="product" placeholder='product' value='${title}'/></p>
-//             <p><textarea name="description" placeholder='description'>${description}</textarea></p>
-//             <p><input type="submit" /></p>
-//           </form>`,
-//           `<a href='/add'>Add Product</a> <a href='/update?id=${title}'>Update</a>`
-//         );
-//         response.writeHead(200);
-//         response.end(HTML);
-//       });
-//     });
 //   } else if (pathname === "/update_process") {
-//     let body = "";
-//     request.on("data", (data) => {
-//       body = body + data;
-//       // too much POST data, kill the connection!
-//       //1e6 === 1 * Math.pow(10,6) === 1 * 1000000 ~~~ 1MB
-//       if (body.length > 1e6) request.connection.destroy();
-//     });
-//     request.on("end", () => {
-//       let post = qs.parse(body);
-//       let id = post.id;
-//       let product = post.product;
-//       let description = post.description;
-//       fs.rename(`data/${id}`, `data/${product}`, (err) => {
-//         if (err) throw err;
-//         fs.writeFile(`data/${product}`, description, "utf8", (err) => {
-//           if (err) throw err;
-//           response.writeHead(302, { Location: `/?id=${product}` });
-//           response.end();
-//         });
-//       });
-//     });
 //   } else if (pathname === "/delete_process") {
-//     let body = "";
-//     request.on("data", (data) => {
-//       body = body + data;
-//       // too much POST data, kill the connection!
-//       //1e6 === 1 * Math.pow(10,6) === 1 * 1000000 ~~~ 1MB
-//       if (body.length > 1e6) request.connection.destroy();
-//     });
-//     request.on("end", () => {
-//       let post = qs.parse(body);
-//       let id = post.id;
-//       let filteredId = path.parse(id).base;
-//       fs.unlink(`data/${filteredId}`, (err) => {
-//         if (err) throw err;
-//         response.writeHead(302, { Location: `/` });
-//         response.end();
-//       });
-//     });
-//   } else {
-//     response.writeHead(404);
-//     response.end("Not found");
-//   }
-// });
+// else {
+//   response.writeHead(404);
+//   response.end("Not found");
+// }
+//   });
 // app.listen(3000);
