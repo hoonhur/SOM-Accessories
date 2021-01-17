@@ -1,9 +1,59 @@
 const express = require("express");
 const app = express();
 const port = 3000;
+const fs = require("fs");
+const template = require("./lib/template.js");
+const path = require("path");
+const sanitizeHtml = require("sanitize-html");
 
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  fs.readdir("./data", (err, filelists) => {
+    if (err) throw err;
+    let title = "Welcome";
+    let description = "SOM Accessory is...";
+    let list = template.list(filelists);
+    let HTML = template.HTML(
+      title,
+      list,
+      `<div id="article">
+          <h2>${title}</h2>
+          <p>${description}</p>
+        </div>`,
+      `<a href='/add'>Add Product</a>`
+    );
+    res.send(HTML);
+  });
+});
+
+app.get("/page/:pageId", (req, res) => {
+  fs.readdir("./data", (err, filelists) => {
+    if (err) throw err;
+    let filteredId = path.parse(req.params.pageId).base;
+    fs.readFile(`data/${filteredId}`, "utf8", function (err2, description) {
+      if (err2) throw err2;
+      let title = filteredId;
+      let sanitizedTitle = sanitizeHtml(title);
+      let sanitizedDescription = sanitizeHtml(description, {
+        allowedTags: ["h1"],
+      });
+      let list = template.list(filelists);
+      let HTML = template.HTML(
+        sanitizedTitle,
+        list,
+        `<div id="article">
+          <h2>${sanitizedTitle}</h2>
+          <p>${sanitizedDescription}</p>
+        </div>`,
+        `<a href='/add'>Add Product</a>
+        <a href='/update?id=${sanitizedTitle}'>Update</a>
+        <form action="delete_process" method="post" onsubmit="alert('Product will be deleted')">
+          <input type='hidden' name="id" value='${sanitizedTitle}'>
+          <input type='submit' value='Delete'>
+        </form>`
+      );
+      res.send(HTML);
+    });
+  });
 });
 
 app.listen(port, () => {
@@ -11,65 +61,16 @@ app.listen(port, () => {
 });
 
 // const http = require("http");
-// const fs = require("fs");
 // const url = require("url");
 // const qs = require("querystring");
-// const path = require("path");
 // const sanitizeHtml = require("sanitize-html");
-
-// const template = require("./lib/template.js");
 
 // const app = http.createServer((request, response) => {
 //   let _url = request.url;
 //   let queryData = url.parse(_url, true).query;
 //   let pathname = url.parse(_url, true).pathname;
 //   if (pathname === "/") {
-//     if (queryData.id === undefined) {
-//       fs.readdir("./data", (err, filelists) => {
-//         let title = "Welcome";
-//         let description = "SOM Accessory is...";
-//         let list = template.list(filelists);
-//         let HTML = template.HTML(
-//           title,
-//           list,
-//           `<div id="article">
-//             <h2>${title}</h2>
-//             <p>${description}</p>
-//           </div>`,
-//           `<a href='/add'>Add Product</a>`
-//         );
-//         response.writeHead(200);
-//         response.end(HTML);
-//       });
 //     } else {
-//       fs.readdir("./data", (err, filelists) => {
-//         let filteredId = path.parse(queryData.id).base;
-//         fs.readFile(`data/${filteredId}`, "utf8", function (err, description) {
-//           let title = queryData.id;
-//           let sanitizedTitle = sanitizeHtml(title);
-//           let sanitizedDescription = sanitizeHtml(description, {
-//             allowedTags: ["h1"],
-//           });
-//           let list = template.list(filelists);
-//           let HTML = template.HTML(
-//             sanitizedTitle,
-//             list,
-//             `<div id="article">
-//               <h2>${sanitizedTitle}</h2>
-//               <p>${sanitizedDescription}</p>
-//             </div>`,
-//             `<a href='/add'>Add Product</a>
-//             <a href='/update?id=${sanitizedTitle}'>Update</a>
-//             <form action="delete_process" method="post" onsubmit="alert('Product will be deleted')">
-//               <input type='hidden' name="id" value='${sanitizedTitle}'>
-//               <input type='submit' value='Delete'>
-//             </form>`
-//           );
-//           response.writeHead(200);
-//           response.end(HTML);
-//         });
-//       });
-//     }
 //   } else if (pathname === "/add") {
 //     fs.readdir("./data", (err, filelists) => {
 //       let title = "Add Product";
