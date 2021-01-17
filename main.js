@@ -159,24 +159,3 @@ app.post("/delete", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening at http"//localhost:${port}`);
 });
-
-// const http = require("http");
-// const url = require("url");
-
-// const app = http.createServer((request, response) => {
-//   let _url = request.url;
-//   let queryData = url.parse(_url, true).query;
-//   let pathname = url.parse(_url, true).pathname;
-//   if (pathname === "/") {
-//      } else {
-//   } else if (pathname === "/add") {
-//   } else if (pathname === "/add_process") {
-//   } else if (pathname === "/update") {
-//   } else if (pathname === "/update_process") {
-//   } else if (pathname === "/delete_process") {
-// else {
-//   response.writeHead(404);
-//   response.end("Not found");
-// }
-//   });
-// app.listen(3000);
