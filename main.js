@@ -8,6 +8,7 @@ const bodyParser = require("body-parser");
 const compression = require("compression");
 
 const app = express();
+app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(compression());
 app.get("*", (req, res, next) => {
@@ -28,6 +29,7 @@ app.get("/", (req, res) => {
     `<div id="article">
           <h2>${title}</h2>
           <p>${description}</p>
+          <img src='/images/pompoms.jpg' style='width: 300px'>
         </div>`,
     `<a href='/add'>Add Product</a>`
   );
