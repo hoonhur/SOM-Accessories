@@ -1,11 +1,15 @@
 const express = require("express");
-const app = express();
 const port = 3000;
 const fs = require("fs");
 const template = require("./lib/template.js");
 const path = require("path");
-const qs = require("querystring");
 const sanitizeHtml = require("sanitize-html");
+const bodyParser = require("body-parser");
+const compression = require("compression");
+
+const app = express();
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(compression());
 
 app.get("/", (req, res) => {
   fs.readdir("./data", (err, filelists) => {
@@ -77,19 +81,12 @@ app.get("/add", (req, res) => {
 });
 
 app.post("/add", (req, res) => {
-  let body = "";
-  req.on("data", (data) => {
-    body = body + data;
-    if (body.length > 1e6) req.connection.destroy();
-  });
-  req.on("end", () => {
-    let post = qs.parse(body);
-    let product = post.product;
-    let description = post.description;
-    fs.writeFile(`data/${product}`, description, "utf8", (err) => {
-      if (err) throw err;
-      res.redirect(`/page/${product}`);
-    });
+  let post = req.body;
+  let product = post.product;
+  let description = post.description;
+  fs.writeFile(`data/${product}`, description, "utf8", (err) => {
+    if (err) throw err;
+    res.redirect(`/page/${product}`);
   });
 });
 
@@ -119,40 +116,26 @@ app.get("/update/:pageId", (req, res) => {
 });
 
 app.post("/update", (req, res) => {
-  let body = "";
-  req.on("data", (data) => {
-    body = body + data;
-    if (body.length > 1e6) req.connection.destroy();
-  });
-  req.on("end", () => {
-    let post = qs.parse(body);
-    let id = post.id;
-    let product = post.product;
-    let description = post.description;
-    fs.rename(`data/${id}`, `data/${product}`, (err) => {
-      if (err) throw err;
-      fs.writeFile(`data/${product}`, description, "utf8", (err2) => {
-        if (err2) throw err2;
-        res.redirect(`/page/${product}`);
-      });
+  let post = req.body;
+  let id = post.id;
+  let product = post.product;
+  let description = post.description;
+  fs.rename(`data/${id}`, `data/${product}`, (err) => {
+    if (err) throw err;
+    fs.writeFile(`data/${product}`, description, "utf8", (err2) => {
+      if (err2) throw err2;
+      res.redirect(`/page/${product}`);
     });
   });
 });
 
 app.post("/delete", (req, res) => {
-  let body = "";
-  req.on("data", (data) => {
-    body = body + data;
-    if (body.length > 1e6) req.connection.destroy();
-  });
-  req.on("end", () => {
-    let post = qs.parse(body);
-    let id = post.id;
-    let filteredId = path.parse(id).base;
-    fs.unlink(`data/${filteredId}`, (err) => {
-      if (err) throw err;
-      res.redirect(`/`);
-    });
+  let post = req.body;
+  let id = post.id;
+  let filteredId = path.parse(id).base;
+  fs.unlink(`data/${filteredId}`, (err) => {
+    if (err) throw err;
+    res.redirect(`/`);
   });
 });
 
